@@ -51,18 +51,26 @@ namespace RockPaperScissors.Server
             applicationExitTokenSource.Dispose();
         }
 
-        private static async void NetworkIoTaskLoop()
+        private static async Task NetworkIoTaskLoop()
         {
             using (var udpClient = new UdpClient(11000))
             {
                 while (!applicationExitTokenSource.IsCancellationRequested)
                 {
-                    consoleMessages.Enqueue(new ConsoleMessage("Waiting for packets..."));
-
-                    var receivedResults = await udpClient.ReceiveAsync();
-                    consoleMessages.Enqueue(new ConsoleMessage($"Received packet: { Encoding.ASCII.GetString(receivedResults.Buffer) }"));
+                    try
+                    {
+                        consoleMessages.Enqueue(new ConsoleMessage("Waiting for packets..."));
+                        var receivedResults = await udpClient.ReceiveAsync(applicationExitTokenSource.Token);
+                        consoleMessages.Enqueue(new ConsoleMessage($"Received packet: {Encoding.ASCII.GetString(receivedResults.Buffer)}"));
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Cancellation token
+                    }
                 }
             }
+
+            await Task.CompletedTask;
         }
     }
 }
